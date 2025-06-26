@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# Zoho-gegevens uit environment variabelen
+# Zoho credentials from environment
 CLIENT_ID = os.getenv("ZOHO_CLIENT_ID")
 CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
 REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
@@ -21,16 +21,20 @@ def get_access_token():
     response = requests.post(url, params=params)
     return response.json().get("access_token")
 
-@app.route("/order", methods=["GET", "POST"])
+def get_customer_email(customer_id, token):
+    url = f"https://www.zohoapis.eu/inventory/v1/customers/{customer_id}?organization_id={ORG_ID}"
+    headers = {
+        "Authorization": f"Zoho-oauthtoken {token}"
+    }
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json().get("customer", {}).get("email", "")
+    return ""
+
+@app.route("/order", methods=["GET"])
 def get_order():
-    # Ondersteun zowel GET als POST
-    if request.method == "POST":
-        data = request.get_json()
-        email = data.get("email")
-        order_id = data.get("order_id")
-    else:  # GET
-        email = request.args.get("email")
-        order_id = request.args.get("order_id")
+    email = request.args.get("email")
+    order_id = request.args.get("order_id")
 
     if not email or not order_id:
         return jsonify({"error": "email and order_id required"}), 400
@@ -44,19 +48,19 @@ def get_order():
     response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
-        return jsonify({
-            "error": "Failed to retrieve order data",
-            "details": response.text
-        }), 500
+        return jsonify({"error": "Failed to retrieve order data", "details": response.text}), 500
 
     orders = response.json().get("salesorders", [])
     for order in orders:
-        if email.lower() in order.get("customer_name", "").lower():
+        customer_id = order.get("customer_id")
+        customer_email = get_customer_email(customer_id, token)
+
+        if customer_email.lower() == email.lower():
             return jsonify({
-                "order_id": order["salesorder_id"],
-                "date": order["date"],
-                "status": order["status"],
-                "total": order["total"]
+                "order_id": order.get("salesorder_number"),
+                "date": order.get("date"),
+                "status": order.get("status"),
+                "total": order.get("total")
             })
 
     return jsonify({"message": "Geen bestelling gevonden met deze gegevens."})
