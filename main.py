@@ -21,10 +21,11 @@ def get_access_token():
     response = requests.post(url, params=params)
     return response.json().get("access_token")
 
-@app.route("/order", methods=["GET"])
+@app.route("/order", methods=["POST"])
 def get_order():
-    email = request.args.get("email")
-    order_id = request.args.get("order_id")
+    data = request.get_json()
+    email = data.get("email")
+    order_id = data.get("order_id")
 
     if not email or not order_id:
         return jsonify({"error": "email and order_id required"}), 400
@@ -44,13 +45,13 @@ def get_order():
     for order in orders:
         if email.lower() in order.get("customer_name", "").lower():
             return jsonify({
-                "order_id": order["salesorder_id"],
-                "date": order["date"],
-                "status": order["status"],
-                "total": order["total"]
+                "order_id": order.get("salesorder_id"),
+                "date": order.get("date"),
+                "status": order.get("status"),
+                "total": order.get("total")
             })
-    
+
     return jsonify({"message": "Geen bestelling gevonden met deze gegevens."})
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
