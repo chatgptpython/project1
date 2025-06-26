@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# Zoho credentials from environment
+# Haal Zoho-credentials uit environment variabelen
 CLIENT_ID = os.getenv("ZOHO_CLIENT_ID")
 CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
 REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
@@ -66,4 +66,4 @@ def get_order():
     return jsonify({"message": "Geen bestelling gevonden met deze gegevens."})
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000)
