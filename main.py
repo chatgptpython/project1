@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# Haal Zoho-credentials uit environment variabelen
+# Zoho-gegevens
 CLIENT_ID = os.getenv("ZOHO_CLIENT_ID")
 CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
 REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
@@ -18,22 +18,9 @@ def get_access_token():
         "client_secret": CLIENT_SECRET,
         "grant_type": "refresh_token"
     }
-    print(">> Access token opvragen...")
     response = requests.post(url, params=params)
     print(">> Access token response:", response.status_code, response.text)
     return response.json().get("access_token")
-
-def get_customer_email(customer_id, token):
-    url = f"https://www.zohoapis.eu/inventory/v1/customers/{customer_id}?organization_id={ORG_ID}"
-    headers = {
-        "Authorization": f"Zoho-oauthtoken {token}"
-    }
-    print(f">> Ophalen klant-email voor customer_id: {customer_id}")
-    response = requests.get(url, headers=headers)
-    print(">> Klant-email response:", response.status_code, response.text)
-    if response.status_code == 200:
-        return response.json().get("customer", {}).get("email", "")
-    return ""
 
 @app.route("/order", methods=["GET"])
 def get_order():
@@ -43,12 +30,10 @@ def get_order():
     print(f">> Ontvangen verzoek: email={email}, order_id={order_id}")
 
     if not email or not order_id:
-        print(">> Mislukt: ontbrekende parameters")
         return jsonify({"error": "email and order_id required"}), 400
 
     token = get_access_token()
     if not token:
-        print(">> Geen access token ontvangen")
         return jsonify({"error": "Failed to obtain access token"}), 500
 
     headers = {
@@ -67,12 +52,11 @@ def get_order():
     print(f">> Aantal gevonden orders: {len(orders)}")
 
     for order in orders:
-        customer_id = order.get("customer_id")
-        customer_email = get_customer_email(customer_id, token)
+        order_email = order.get("email", "").strip().lower()
+        print(f">> Vergelijken: opgegeven email={email.strip().lower()} vs order-email={order_email}")
 
-        print(f">> Vergelijken: opgegeven email={email.strip().lower()} vs klant-email={customer_email.strip().lower()}")
-        if customer_email.strip().lower() == email.strip().lower():
-            print(">> Match gevonden, order wordt geretourneerd")
+        if order_email == email.strip().lower():
+            print(">> Match gevonden! Bestelling komt overeen.")
             return jsonify({
                 "order_id": order.get("salesorder_number"),
                 "date": order.get("date"),
