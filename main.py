@@ -21,11 +21,16 @@ def get_access_token():
     response = requests.post(url, params=params)
     return response.json().get("access_token")
 
-@app.route("/order", methods=["POST"])
+@app.route("/order", methods=["GET", "POST"])
 def get_order():
-    data = request.get_json()
-    email = data.get("email")
-    order_id = data.get("order_id")
+    # Ondersteun zowel GET als POST
+    if request.method == "POST":
+        data = request.get_json()
+        email = data.get("email")
+        order_id = data.get("order_id")
+    else:  # GET
+        email = request.args.get("email")
+        order_id = request.args.get("order_id")
 
     if not email or not order_id:
         return jsonify({"error": "email and order_id required"}), 400
@@ -39,19 +44,22 @@ def get_order():
     response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
-        return jsonify({"error": "Failed to retrieve order data", "details": response.text}), 500
+        return jsonify({
+            "error": "Failed to retrieve order data",
+            "details": response.text
+        }), 500
 
     orders = response.json().get("salesorders", [])
     for order in orders:
         if email.lower() in order.get("customer_name", "").lower():
             return jsonify({
-                "order_id": order.get("salesorder_id"),
-                "date": order.get("date"),
-                "status": order.get("status"),
-                "total": order.get("total")
+                "order_id": order["salesorder_id"],
+                "date": order["date"],
+                "status": order["status"],
+                "total": order["total"]
             })
 
     return jsonify({"message": "Geen bestelling gevonden met deze gegevens."})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
