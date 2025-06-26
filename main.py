@@ -40,7 +40,7 @@ def get_order():
         "Authorization": f"Zoho-oauthtoken {token}"
     }
 
-    url = f"https://inventory.zoho.eu/api/v1/salesorders?organization_id={ORG_ID}&search_text={order_id}"
+    url = f"https://www.zohoapis.eu/inventory/v1/salesorders?organization_id={ORG_ID}&search_text={order_id}"
     response = requests.get(url, headers=headers)
 
     if response.status_code != 200:
